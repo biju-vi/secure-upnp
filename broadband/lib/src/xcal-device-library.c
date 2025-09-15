@@ -173,7 +173,7 @@ void xupnpEventCallback_register(xupnpEventCallback callback_func)
 int check_rfc()
 {
     errno_t rc       = -1;
-    int     ind      = -1;
+    int     ind      = -1
     char temp[24] = {0};
     if (!syscfg_get(NULL, "Refactor", temp, sizeof(temp)) )
     {
