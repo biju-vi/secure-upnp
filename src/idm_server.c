@@ -295,13 +295,19 @@ int idm_server_start(char* Interface, char * base_mac)
     g_thread_init (NULL);
     g_type_init();
     GError* error = 0;
-    strcpy(interface,Interface);
+    errno_t rc       = -1;
+
+    strncpy(interface, Interface, sizeof(interface) - 1);
     g_message("%s %d interface=%s",__FUNCTION__,__LINE__,interface);
     getipaddress((const char *)interface,clientIp,FALSE);
     serial_num = g_string_new(NULL);
     getserialnum(serial_num);
     getipaddress((const char *)interface,gwyIpv6,TRUE);
-    strcpy_s(bcastMacaddress, MAC_ADDR_SIZE, base_mac);
+    rc = strcpy_s(bcastMacaddress, MAC_ADDR_SIZE, base_mac);
+    if(rc != EOK)
+    {
+        return 1;
+    }
 #ifndef IDM_DEBUG
 #ifndef ENABLE_HW_CERT_USAGE
     g_message("%s cert file=%s  key file = %s", __FUNCTION__, certFile, keyFile);

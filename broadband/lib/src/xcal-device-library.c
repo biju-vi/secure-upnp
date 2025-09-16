@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 */
-#include <stdio.h
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <glib.h>
@@ -173,16 +173,19 @@ void xupnpEventCallback_register(xupnpEventCallback callback_func)
 int check_rfc()
 {
     errno_t rc       = -1;
-    int     ind      = -1
+    int     ind      = -1;
     char temp[24] = {0};
     if (!syscfg_get(NULL, "Refactor", temp, sizeof(temp)) )
     {
-        rc = strcmp_s("true",strlen("true"),temp,&ind);
-        ERR_CHK(rc);
-        if((!ind) && (rc == EOK))
+        if(strlen(temp) > 0)
         {
-            g_message("New Device Refactoring rfc_enabled");
-            return 1;
+            rc = strcmp_s("true",strlen("true"),temp,&ind);
+            ERR_CHK(rc);
+            if((!ind) && (rc == EOK))
+            {
+                g_message("New Device Refactoring rfc_enabled");
+                return 1;
+            }
         }
     }
     else
@@ -503,7 +506,6 @@ gboolean readDevFile(const char *deviceFile)
 
         }
         g_strfreev(tokens);
-        g_free(devfilebuffer);
     }
 #if !defined (NO_MOCA_FEATURE_SUPPORT)
     g_string_printf(mocaIface,"%s",ISOLATION_IF);
@@ -520,6 +522,10 @@ gboolean readDevFile(const char *deviceFile)
         g_clear_error(&error);
     }
 
+    if(devfilebuffer != NULL)
+    {
+        g_free(devfilebuffer);
+    }
     //diagid=1000;
     return result;
 }
@@ -1013,6 +1019,11 @@ gboolean gettimezone(void)
     {
         /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
         g_clear_error(&error);
+    }
+
+    if (dsgproxyfile != NULL)
+    {
+        g_free(dsgproxyfile);
     }
 
     return result;
@@ -1961,12 +1972,12 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
         const gchar *hostmac = (gchar *)getmacaddress(devConf->hostMacIf);
         if (hostmac) {
             g_message("MAC address in  interface: %s  %s \n", devConf->hostMacIf, hostmac);
+            g_string_assign(hostmacaddress, hostmac);
+            g_message("Host mac address is %s", hostmacaddress->str);
         } else {
             g_message("failed to retrieve macaddress on interface %s ",
                       devConf->hostMacIf);
         }
-        g_string_assign(hostmacaddress, hostmac);
-        g_message("Host mac address is %s", hostmacaddress->str);
     }
 #endif
     if (devConf->bcastIf != NULL ) {
@@ -1974,11 +1985,11 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
         if (bcastmac) {
             g_message("Broadcast MAC address in  interface: %s  %s ", devConf->bcastIf,
                       bcastmac);
+            g_string_assign(bcastmacaddress, bcastmac);
+            g_message("bcast mac address is %s", bcastmacaddress->str);
         } else {
             g_message("failed to retrieve macaddress on interface %s ", devConf->bcastIf);
         }
-        g_string_assign(bcastmacaddress, bcastmac);
-        g_message("bcast mac address is %s", bcastmacaddress->str);
     }
     const gchar *eroutermac = (gchar *)getmacaddress(UDN_IF);
     if(eroutermac)
@@ -2139,6 +2150,8 @@ GString *getID( const gchar *id )
             if (!isDevIdPresent) {
                 if (g_strrstr(id, PARTNER_ID)) {
                     g_message("%s not found in Json string in Auth url %s \n ", id, jsonData->str);
+                    g_string_free(jsonData, TRUE);
+                    g_strfreev(tokens);
                     return value;
                 }
                 if (counter < MAX_DEBUG_MESSAGE ) {
@@ -2205,6 +2218,9 @@ gboolean updatesystemids(void)
         if (error) {
             /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
             g_clear_error(&error);
+        }
+        if (diagfile != NULL) {
+            g_free(diagfile);
         }
         return result;
     }
@@ -2359,6 +2375,10 @@ gboolean readconffile(const char *configfile)
     GError *error = NULL;
     /* Create a new GKeyFile object and a bitwise list of flags. */
     keyfile = g_key_file_new ();
+    if(!keyfile)
+    {
+        return FALSE; 
+    }
     flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
     /* Load the GKeyFile from keyfile.conf or return. */
     if (!g_key_file_load_from_file (keyfile, configfile, flags, &error)) {
@@ -2367,9 +2387,7 @@ gboolean readconffile(const char *configfile)
             /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
             g_clear_error(&error);
         }
-        if (keyfile) {
-            g_key_file_free(keyfile);
-        }
+        g_key_file_free(keyfile);
         return FALSE;
     }
     //g_message("Starting with Settings %s\n", g_key_file_to_data(keyfile, NULL,
@@ -2790,6 +2808,9 @@ gboolean getetchosts(void)
         /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
         g_clear_error(&error);
     }
+    if (etchostsfile != NULL) {
+        g_free(etchostsfile);
+    }
     return result;
 }
 
@@ -2898,11 +2919,11 @@ gboolean parsednsconfig(void)
     GError                  *error = NULL;
     gboolean                result = FALSE;
     gchar *dnsconfigfile = NULL;
-    GString *strdnsconfig = g_string_new(NULL);
     if (devConf->dnsFile == NULL) {
         g_warning("dnsconfig file name not found in config");
         return result;
     }
+    GString *strdnsconfig = g_string_new(NULL);
     result = g_file_get_contents (devConf->dnsFile, &dnsconfigfile, NULL, &error);
  /* Coverity Fix for CID: 125036 : Forward NULL */
       if (result == FALSE) {
@@ -2925,13 +2946,17 @@ gboolean parsednsconfig(void)
             }
         }
         g_string_assign(dnsconfig, strdnsconfig->str);
-        g_string_free(strdnsconfig, TRUE);
         g_message("DNS Config is %s", dnsconfig->str);
         g_strfreev(tokens);
     }
     if (error) {
         /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
         g_clear_error(&error);
+    }
+    g_string_free(strdnsconfig, TRUE);
+    if(dnsconfigfile)
+    {
+        g_free(dnsconfigfile);
     }
     return result;
 }

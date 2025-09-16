@@ -171,7 +171,7 @@ unsigned short dp_hashindex (long ipaddr)
     // Fold the ip address to get a 9 bit hansh index
     ret =(ipaddr & 0x3FF) + ((ipaddr >> 10)&0x3FF) + ((ipaddr >> 20)&0x3FF) 
                                                    + ((ipaddr >> 30) & 0x3FF);
-    ret = ((ret & 0x3FF) + ((ret >> 10) && 0x3FF)) &0x3FF;
+    ret = ((ret & 0x3FF) + ((ret >> 10) & 0x3FF)) &0x3FF;
     if (ret) 
        ret = ret-1;
     return(ret);
@@ -367,7 +367,7 @@ dp_wlist_ss_t dpnode_insert(long ipaddr, char *macaddr)
              g_message("dpnode_insert:collsion ip:%lu mac:%s hash index %d\n",ipaddr, macaddr, index);
              dp_wlist[pindex].ofb_index = index;  
              dp_wlist[index].ipaddr = ipaddr;
-             strncpy(dp_wlist[index].macaddr, macaddr, MAC_ADDRESS_SIZE);
+             strncpy(dp_wlist[index].macaddr, macaddr, sizeof(dp_wlist[index].macaddr) - 1);
              dp_wlist[index].ofb_index = 0;
           }
        }
@@ -377,7 +377,7 @@ dp_wlist_ss_t dpnode_insert(long ipaddr, char *macaddr)
              index = dp_hashindex (ipaddr);
              g_message("dpnode_insert:new ip:%lu mac:%s hash index %d\n",ipaddr, macaddr, index);
              dp_wlist[index].ipaddr = ipaddr;
-             strncpy(dp_wlist[index].macaddr, macaddr,MAC_ADDRESS_SIZE);
+             strncpy(dp_wlist[index].macaddr, macaddr, sizeof(dp_wlist[index].macaddr) - 1);
              dp_wlist[index].ofb_index = 0;
        }
         
@@ -388,7 +388,7 @@ dp_wlist_ss_t dpnode_insert(long ipaddr, char *macaddr)
        {
              g_message("dpnode_insert:mac update ip:%lu mac:%s hash index %d\n",ipaddr, macaddr, index);
              // update mac address
-             strncpy(dp_wlist[index].macaddr, macaddr,MAC_ADDRESS_SIZE);
+             strncpy(dp_wlist[index].macaddr, macaddr, sizeof(dp_wlist[index].macaddr) -1 );
        }
        else {
           ret = DP_WLIST_ERROR;
@@ -1302,6 +1302,7 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     if(!gwydata->sproxy)
     {
        deviceAddNo--;
+       free_gwydata(gwydata); 
        g_message("Unable to get the services, sproxy null. returning");
        return;
     }
@@ -1370,6 +1371,7 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
         g_clear_object(&(gwydata->sproxy));
     }
     g_free(sno);
+    free_gwydata(gwydata);
     deviceAddNo--;
     g_message("Exting from device_proxy_available_cb deviceAddNo = %u",deviceAddNo);
 
@@ -1477,6 +1479,7 @@ device_proxy_available_cb_client (GUPnPControlPoint *cp, GUPnPDeviceProxy *dprox
     }
     g_message("Discovered a Xi device");
     g_free(sno);
+    free_gwydata(gwydata);
     deviceAddNo--;
     g_message("Exting from Device_proxy_available_cb client deviceAddNo = %u",deviceAddNo);
 
@@ -1658,6 +1661,7 @@ device_proxy_available_cb_gw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 	g_object_unref(gwydata->sproxy_q);
     }
     g_free(sno);
+    free_gwydata(gwydata);
     deviceAddNo--;
     g_message("Discovered a XG device");
     g_message("Exting from device_proxy_available_cb_gateway deviceAddNo = %u",deviceAddNo);
@@ -2769,34 +2773,52 @@ gboolean process_gw_services_gateway_config(GUPnPServiceProxy *sproxy, GwyDevice
     g_message("Entering into process_gw_services_gateway_config ");
     if ( processStringRequest(sproxy, "GetDataGatewayIPaddress", "DataGatewayIPaddress" , &temp, FALSE))
     {
-        g_string_assign(gwData->dataGatewayIPaddress, temp);
-        g_free(temp);
+        if(temp)
+        {
+            g_string_assign(gwData->dataGatewayIPaddress, temp);
+            g_free(temp);
+        }
     }
     
     if ( processStringRequest(sproxy, "GetGatewayStbIP", "GatewayStbIP" , &temp, FALSE))
     {
-        g_string_assign(gwData->gatewaystbip, temp);
-        g_free(temp);
+        if(temp)
+        {
+            g_string_assign(gwData->gatewaystbip, temp);
+            g_free(temp);
+        }
     }
     if ( processStringRequest(sproxy, "GetIpv6Prefix", "Ipv6Prefix" , &temp, FALSE ))
     {
-        g_string_assign(gwData->ipv6prefix, temp);
-        g_free(temp);
+        if(temp)
+        {
+            g_string_assign(gwData->ipv6prefix, temp);
+            g_free(temp);
+        }
     }
     if ( processStringRequest(sproxy, "GetDnsConfig", "DnsConfig" , &temp, FALSE))
     {
-        g_string_assign(gwData->dnsconfig, temp);
-        g_free(temp);
+        if(temp)
+        {
+            g_string_assign(gwData->dnsconfig, temp);
+            g_free(temp);
+        }
     }
     if ( processStringRequest(sproxy, "GetDeviceName", "DeviceName" , &temp, FALSE))
     {
-        g_string_assign(gwData->devicename, temp);
-        g_free(temp);
+        if(temp)
+        {
+            g_string_assign(gwData->devicename, temp);
+            g_free(temp);
+        }
     }
     if ( processStringRequest(sproxy, "GetBcastMacAddress", "BcastMacAddress" , &temp, FALSE))
     {
+        if(temp)
+        {
 	    g_string_assign(gwData->bcastmacaddress,temp);
 	    g_free(temp);
+        }
     }
     if ( processStringRequest(sproxy, "GetGatewayIPv6", "GatewayIPv6" , &temp, FALSE))
     {
@@ -2805,18 +2827,27 @@ gboolean process_gw_services_gateway_config(GUPnPServiceProxy *sproxy, GwyDevice
     }
     if ( processStringRequest(sproxy, "GetGatewayIP", "GatewayIP" , &temp, FALSE))
     {
-        g_string_assign(gwData->gwyip, temp);
-        g_free(temp);
+        if(temp)
+        {
+            g_string_assign(gwData->gwyip, temp);
+            g_free(temp);
+        }
     }
     if ( processStringRequest(sproxy, "GetHostMacAddress", "HostMacAddress" , &temp, FALSE))
     {
-        g_string_assign(gwData->hostmacaddress, temp);
-        g_free(temp);
+        if(temp)
+        {
+            g_string_assign(gwData->hostmacaddress, temp);
+            g_free(temp);
+        }
     }
     if ( processStringRequest(sproxy, "GetHosts", "Hosts" , &temp, FALSE))
     {
-        g_string_assign(gwData->etchosts, temp);
-        g_free(temp);
+        if(temp)
+        {
+            g_string_assign(gwData->etchosts, temp);
+            g_free(temp);
+        }
     }
 #ifdef GUPNP_1_2    
     GUPnPServiceProxyAction * action = gupnp_service_proxy_action_new ("GetIsGateway", "deviceProtection", G_TYPE_BOOLEAN,TRUE, NULL);
@@ -2845,12 +2876,15 @@ gboolean process_gw_services_gateway_config(GUPnPServiceProxy *sproxy, GwyDevice
 
     if ( processStringRequest(sproxy, "GetIPSubNet", "IPSubNet" , &temp, FALSE))
     {
-        g_string_assign(gwData->ipSubNet, temp);
-        if(temp && strlen(temp))
+        if(temp)
+        {
+            g_string_assign(gwData->ipSubNet, temp);
 #if !defined (NO_MOCA_FEATURE_SUPPORT)
-            addRouteToMocaBridge(temp);
+            if(strlen(temp))
+                addRouteToMocaBridge(temp);
 #endif
-        g_free(temp);
+            g_free(temp);
+        }
     }
 
     g_message("Exiting from process_gw_services_gateway_config ");
@@ -4035,15 +4069,19 @@ static void on_last_change (GUPnPServiceProxy *sproxy, const char  *variable_nam
                 if (g_strcmp0(g_strstrip((gchar*)variable_name),"IPSubNet") == 0)
                 {
                     updated_value = g_value_get_string(value);
-                    g_message("Updated value is %s ", updated_value);
-                    if(g_strcmp0(g_strstrip((gchar*)updated_value),gwdata->ipSubNet->str) != 0)
+                    if(updated_value)
                     {
-                        bUpdateDiscoveryResult=TRUE;
-                        g_string_assign(gwdata->ipSubNet, updated_value);
-                        if(updated_value && strlen(updated_value))
+
+                        g_message("Updated value is %s ", updated_value);
+                        if(g_strcmp0(g_strstrip((gchar*)updated_value),gwdata->ipSubNet->str) != 0)
+                        {
+                            bUpdateDiscoveryResult=TRUE;
+                            g_string_assign(gwdata->ipSubNet, updated_value);
+                            if(updated_value && strlen(updated_value))
 #if !defined (NO_MOCA_FEATURE_SUPPORT)
                             addRouteToMocaBridge((char*)updated_value);
 #endif
+                        }
                     }
                 }
                 //update_gwylist(gwdata);
