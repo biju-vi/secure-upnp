@@ -297,6 +297,7 @@ int idm_server_start(char* Interface, char * base_mac)
     GError* error = 0;
     errno_t rc       = -1;
 
+    g_message("Starting IDM Server");
     strncpy(interface, Interface, sizeof(interface) - 1);
     g_message("%s %d interface=%s",__FUNCTION__,__LINE__,interface);
     getipaddress((const char *)interface,clientIp,FALSE);

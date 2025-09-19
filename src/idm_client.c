@@ -914,6 +914,7 @@ void start_discovery(discovery_config_t* dc_obj,int (*func_callback)(device_info
         g_message("interface=%s port=%d discovery_interval=%d loss_detection_window=%d\n", dc_obj->interface, dc_obj->port, dc_obj->discovery_interval, dc_obj->loss_detection_window);
         return;
     }
+    g_message("Starting Discovery Process");
     g_message("interface=%s port=%d",dc_obj->interface,dc_obj->port);
     g_thread_init (NULL);
     g_type_init();
